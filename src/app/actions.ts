@@ -51,25 +51,26 @@ const mockEcosystemServiceModelerOutput = JSON.stringify({
 
 export async function getStrategies(
   values: z.infer<typeof formSchema>
-): Promise<{ data: GenerateClimateResilientStrategiesOutput | null; error: string | null; }> {
+): Promise<{ data: GenerateClimateResilientStrategiesOutput | null; error: string | null; notification: string | null; }> {
   const validatedFields = formSchema.safeParse(values);
 
   if (!validatedFields.success) {
     return {
       data: null,
       error: 'Invalid input.',
+      notification: null,
     };
   }
   
   try {
     const { city } = validatedFields.data;
     let { cityOverview } = validatedFields.data;
-    let nasaError: string | null = null;
+    let notification: string | null = null;
     
     // 1. Get coordinates for the city
     const coordinates = await getCoordinates(city);
     if (!coordinates) {
-      return { data: null, error: `Could not find coordinates for ${city}. Please try a different city.` };
+      return { data: null, error: `Could not find coordinates for ${city}. Please try a different city.`, notification: null };
     }
 
     // 2. Get NASA POWER data for the coordinates
@@ -83,7 +84,7 @@ export async function getStrategies(
             cityOverview = descriptionOutput.cityOverview;
         } else {
             // If NASA data fails, generate overview from just the city name
-            nasaError = `Could not retrieve weather data for ${city}. Generating a plausible city overview with AI as a fallback.`;
+            notification = `Could not retrieve weather data for ${city}. Generating a plausible city overview with AI as a fallback.`;
             const descriptionOutput = await generateCityDescriptionFromCityName({ city });
             cityOverview = descriptionOutput.cityOverview;
         }
@@ -95,14 +96,14 @@ export async function getStrategies(
       ecosystemServiceModelerOutput: mockEcosystemServiceModelerOutput,
       cityOverview: cityOverview,
     });
-    // Pass the NASA error to the frontend if it occurred
-    return { data: output, error: nasaError };
+    
+    return { data: output, error: null, notification: notification };
   } catch (error) {
     console.error('Error generating strategies:', error);
     let errorMessage = 'Failed to generate strategies. Please try again.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return { data: null, error: errorMessage };
+    return { data: null, error: errorMessage, notification: null };
   }
 }

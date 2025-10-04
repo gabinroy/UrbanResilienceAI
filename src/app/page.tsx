@@ -9,6 +9,7 @@ import InitialState from '@/components/initial-state';
 import LoadingState from '@/components/loading-state';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [strategies, setStrategies] =
@@ -17,6 +18,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -26,8 +28,17 @@ export default function Home() {
 
   const handleFormSubmit = (
     data: GenerateClimateResilientStrategiesOutput | null,
-    error: string | null
+    error: string | null,
+    notification: string | null
   ) => {
+    if (notification) {
+      toast({
+        title: 'API Notice',
+        description: notification,
+        duration: 15000,
+      });
+    }
+
     if (data) {
       setStrategies(data);
       setError(null);

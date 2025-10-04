@@ -29,7 +29,7 @@ const formSchema = z.object({
 
 interface StrategyFormProps {
   setIsLoading: (isLoading: boolean) => void;
-  onResult: (data: GenerateClimateResilientStrategiesOutput | null, error: string | null) => void;
+  onResult: (data: GenerateClimateResilientStrategiesOutput | null, error: string | null, notification: string | null) => void;
 }
 
 export default function StrategyForm({ setIsLoading, onResult }: StrategyFormProps) {
@@ -47,7 +47,7 @@ export default function StrategyForm({ setIsLoading, onResult }: StrategyFormPro
     setIsLoading(true);
     startTransition(async () => {
       const result = await getStrategies(values);
-      onResult(result.data, result.error);
+      onResult(result.data, result.error, result.notification);
       setIsLoading(false);
     });
   }
