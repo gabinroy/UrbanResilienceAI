@@ -44,12 +44,15 @@ export async function getNasaPowerData(lat: number, lon: number): Promise<NasaPo
   const baseUrl = 'https://power.larc.nasa.gov/api/temporal/daily/point';
   const parameters = 'T2M,RH2M'; // Temperature at 2m, Relative Humidity at 2m
   
-  // Get today's date and yesterday's date in YYYYMMDD format
+  // Get date range for the last two available days.
   const today = new Date();
   const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const endDate = today.toISOString().slice(0, 10).replace(/-/g, '');
-  const startDate = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+  yesterday.setDate(today.getDate() - 1);
+  const dayBeforeYesterday = new Date(today);
+  dayBeforeYesterday.setDate(today.getDate() - 2);
+
+  const endDate = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+  const startDate = dayBeforeYesterday.toISOString().slice(0, 10).replace(/-/g, '');
 
   try {
     const response = await axios.get(baseUrl, {
@@ -64,7 +67,7 @@ export async function getNasaPowerData(lat: number, lon: number): Promise<NasaPo
       },
     });
 
-    const properties = response.data.properties.parameter;
+    const properties = response.data?.properties?.parameter;
     if (properties && properties.T2M && properties.RH2M) {
       // Get the last available reading
       const t2mKeys = Object.keys(properties.T2M);
