@@ -1,3 +1,55 @@
+'use client';
+
+import type { GenerateClimateResilientStrategiesOutput } from '@/ai/flows/generate-climate-resilient-strategies';
+import { useState } from 'react';
+import Header from '@/components/header';
+import StrategyForm from '@/components/strategy-form';
+import ResultsDisplay from '@/components/results-display';
+import InitialState from '@/components/initial-state';
+import LoadingState from '@/components/loading-state';
+
 export default function Home() {
-  return <></>;
+  const [strategies, setStrategies] =
+    useState<GenerateClimateResilientStrategiesOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFormSubmit = (
+    data: GenerateClimateResilientStrategiesOutput | null,
+    error: string | null
+  ) => {
+    if (data) {
+      setStrategies(data);
+      setError(null);
+    }
+    if (error) {
+      setError(error);
+      setStrategies(null);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen w-full flex-col bg-background">
+      <Header />
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <div className="mx-auto grid w-full max-w-7xl items-start gap-8 lg:grid-cols-[1fr_350px]">
+          <div className="grid gap-8">
+            {isLoading ? (
+              <LoadingState />
+            ) : strategies ? (
+              <ResultsDisplay strategies={strategies} />
+            ) : (
+              <InitialState error={error} />
+            )}
+          </div>
+          <div className="grid gap-6">
+            <StrategyForm
+              setIsLoading={setIsLoading}
+              onResult={handleFormSubmit}
+            />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }

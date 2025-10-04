@@ -1,0 +1,101 @@
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { useTransition } from 'react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getStrategies } from '@/app/actions';
+import { type GenerateClimateResilientStrategiesOutput } from '@/ai/flows/generate-climate-resilient-strategies';
+import { BrainCircuit } from 'lucide-react';
+
+const formSchema = z.object({
+  cityOverview: z.string().min(50, 'Please provide a more detailed city overview of at least 50 characters.'),
+});
+
+interface StrategyFormProps {
+  setIsLoading: (isLoading: boolean) => void;
+  onResult: (data: GenerateClimateResilientStrategiesOutput | null, error: string | null) => void;
+}
+
+export default function StrategyForm({ setIsLoading, onResult }: StrategyFormProps) {
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      cityOverview: '',
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    startTransition(async () => {
+      const result = await getStrategies(values);
+      onResult(result.data, result.error);
+      setIsLoading(false);
+    });
+  }
+
+  return (
+    <Card className="sticky top-24">
+      <CardHeader>
+        <CardTitle className="font-headline text-lg">Generate Strategies</CardTitle>
+        <CardDescription>
+          Describe your city to generate custom climate-resilient strategies.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="cityOverview"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City Overview</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="e.g., 'Coastal city with a population of 2 million, facing rising sea levels and frequent heatwaves. Key infrastructure includes a major port and expanding residential zones...'"
+                      className="min-h-[150px] resize-y"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Include demographics, infrastructure, and key environmental challenges.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="mr-2 h-4 w-4" />
+                  Generate with AI
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
