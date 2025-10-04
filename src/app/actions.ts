@@ -64,6 +64,7 @@ export async function getStrategies(
   try {
     const { city } = validatedFields.data;
     let { cityOverview } = validatedFields.data;
+    let nasaError: string | null = null;
     
     // 1. Get coordinates for the city
     const coordinates = await getCoordinates(city);
@@ -72,9 +73,11 @@ export async function getStrategies(
     }
 
     // 2. Get NASA POWER data for the coordinates
-    const nasaData = await getNasaPowerData(coordinates.lat, coordinates.lon);
+    let nasaData = await getNasaPowerData(coordinates.lat, coordinates.lon);
     if (!nasaData) {
-      return { data: null, error: 'Could not retrieve weather data from NASA POWER API.' };
+      nasaError = 'Could not retrieve weather data from NASA POWER API. Using default values.';
+      // Fallback to default data
+      nasaData = { T2M: 25, RH2M: 50 }; // Default average values
     }
     
     // 3. Generate city overview if it's not provided
@@ -89,7 +92,8 @@ export async function getStrategies(
       ecosystemServiceModelerOutput: mockEcosystemServiceModelerOutput,
       cityOverview: cityOverview,
     });
-    return { data: output, error: null };
+    // Pass the NASA error to the frontend if it occurred
+    return { data: output, error: nasaError };
   } catch (error) {
     console.error('Error generating strategies:', error);
     let errorMessage = 'Failed to generate strategies. Please try again.';
