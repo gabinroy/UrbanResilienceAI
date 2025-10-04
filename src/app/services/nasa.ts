@@ -44,38 +44,37 @@ export async function getNasaPowerData(lat: number, lon: number): Promise<NasaPo
   const baseUrl = 'https://power.larc.nasa.gov/api/temporal/daily/point';
   const parameters = 'T2M,RH2M'; // Temperature at 2m, Relative Humidity at 2m
   
-  // Get date range for the last two available days.
+  // Get date range for the last 3-4 days to ensure data availability.
   const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const dayBeforeYesterday = new Date(today);
-  dayBeforeYesterday.setDate(today.getDate() - 2);
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() - 2); // End date is 2 days ago
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 3); // Start date is 3 days ago
 
-  const endDate = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
-  const startDate = dayBeforeYesterday.toISOString().slice(0, 10).replace(/-/g, '');
+  const endDateString = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+  const startDateString = startDate.toISOString().slice(0, 10).replace(/-/g, '');
+
+  // Manually construct the URL to ensure correct parameter formatting
+  const requestUrl = `${baseUrl}?parameters=${parameters}&community=RE&longitude=${lon}&latitude=${lat}&start=${startDateString}&end=${endDateString}&format=JSON`;
 
   try {
-    const response = await axios.get(baseUrl, {
-      params: {
-        parameters,
-        community: 'RE',
-        longitude: lon,
-        latitude: lat,
-        start: startDate,
-        end: endDate,
-        format: 'JSON',
-      },
-    });
+    const response = await axios.get(requestUrl);
 
     const properties = response.data?.properties?.parameter;
     if (properties && properties.T2M && properties.RH2M) {
       // Get the last available reading
       const t2mKeys = Object.keys(properties.T2M);
       const rh2mKeys = Object.keys(properties.RH2M);
+      
+      if (t2mKeys.length === 0 || rh2mKeys.length === 0) {
+        console.warn('NASA POWER API returned no data for the requested date range.');
+        return null;
+      }
 
       const lastT2M = properties.T2M[t2mKeys[t2mKeys.length - 1]];
       const lastRH2M = properties.RH2M[rh2mKeys[rh2mKeys.length - 1]];
 
+      // The API returns -999 for missing values.
       if (lastT2M !== -999 && lastRH2M !== -999) {
         return {
           T2M: lastT2M,
@@ -83,10 +82,15 @@ export async function getNasaPowerData(lat: number, lon: number): Promise<NasaPo
         };
       }
     }
+    console.warn('NASA POWER API response was missing expected data properties.');
     return null;
 
   } catch (error) {
-    console.error('Error fetching NASA POWER data:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error(`Error fetching NASA POWER data: Status ${error.response.status}`, error.response.data);
+    } else {
+      console.error('Error fetching NASA POWER data:', error);
+    }
     return null;
   }
 }
