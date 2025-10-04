@@ -16,12 +16,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStrategies } from '@/app/actions';
 import { type GenerateClimateResilientStrategiesOutput } from '@/ai/flows/generate-climate-resilient-strategies';
 import { BrainCircuit } from 'lucide-react';
 
 const formSchema = z.object({
+  city: z.string().min(2, 'Please provide a valid city name.'),
   cityOverview: z.string().min(50, 'Please provide a more detailed city overview of at least 50 characters.'),
 });
 
@@ -36,6 +38,7 @@ export default function StrategyForm({ setIsLoading, onResult }: StrategyFormPro
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      city: '',
       cityOverview: '',
     },
   });
@@ -60,6 +63,25 @@ export default function StrategyForm({ setIsLoading, onResult }: StrategyFormPro
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., 'New York', 'Tokyo'"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The city for which to generate strategies.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="cityOverview"
