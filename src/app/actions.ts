@@ -69,13 +69,13 @@ export async function getStrategies(
     
     // 1. Get coordinates for the city
     const coordinates = await getCoordinates(city);
-    if (!coordinates) {
-      return { data: null, error: `Could not find coordinates for ${city}. Please try a different city.`, notification: null };
+    let nasaData: NasaPowerData | null = null;
+
+    if (coordinates) {
+        // 2. Get NASA POWER data if we have coordinates
+        nasaData = await getNasaPowerData(coordinates.lat, coordinates.lon);
     }
 
-    // 2. Get NASA POWER data for the coordinates
-    let nasaData = await getNasaPowerData(coordinates.lat, coordinates.lon);
-    
     // 3. Generate city overview if it's not provided
     if (!cityOverview || cityOverview.trim().length === 0) {
         if (nasaData) {
@@ -83,14 +83,18 @@ export async function getStrategies(
             const descriptionOutput = await generateCityDescription({ city, nasaData });
             cityOverview = descriptionOutput.cityOverview;
         } else {
-            // If NASA data fails, generate overview from just the city name
-            notification = `Could not retrieve weather data for ${city}. Generating a plausible city overview with AI as a fallback.`;
+            // If NASA data or coordinates fail, generate overview from just the city name
+            if (!coordinates) {
+                notification = `Could not find coordinates for ${city}. Generating a plausible city overview with AI as a fallback.`;
+            } else {
+                notification = `Could not retrieve weather data for ${city}. Generating a plausible city overview with AI as a fallback.`;
+            }
             const descriptionOutput = await generateCityDescriptionFromCityName({ city });
             cityOverview = descriptionOutput.cityOverview;
         }
     }
 
-    // 4. Generate strategies using the real data and overview
+    // 4. Generate strategies using the real or fallback data and overview
     const output = await generateClimateResilientStrategies({
       urbanVulnerabilityIndex: mockUrbanVulnerabilityIndex(nasaData), // This will use defaults if nasaData is null
       ecosystemServiceModelerOutput: mockEcosystemServiceModelerOutput,
