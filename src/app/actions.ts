@@ -4,12 +4,13 @@ import {
   generateClimateResilientStrategies,
   type GenerateClimateResilientStrategiesOutput,
 } from '@/ai/flows/generate-climate-resilient-strategies';
+import { generateCityDescription } from '@/ai/flows/generate-city-description';
 import { z } from 'zod';
 import { getCoordinates, getNasaPowerData, NasaPowerData } from './services/nasa';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
-  cityOverview: z.string().min(50, 'Please provide a more detailed overview.'),
+  cityOverview: z.string().optional(),
 });
 
 // Mock data to simulate complex data inputs for the AI model
@@ -61,7 +62,8 @@ export async function getStrategies(
   }
   
   try {
-    const { city, cityOverview } = validatedFields.data;
+    const { city } = validatedFields.data;
+    let { cityOverview } = validatedFields.data;
     
     // 1. Get coordinates for the city
     const coordinates = await getCoordinates(city);
@@ -74,8 +76,14 @@ export async function getStrategies(
     if (!nasaData) {
       return { data: null, error: 'Could not retrieve weather data from NASA POWER API.' };
     }
+    
+    // 3. Generate city overview if it's not provided
+    if (!cityOverview || cityOverview.trim().length === 0) {
+        const descriptionOutput = await generateCityDescription({ city, nasaData });
+        cityOverview = descriptionOutput.cityOverview;
+    }
 
-    // 3. Generate strategies using the real data
+    // 4. Generate strategies using the real data and overview
     const output = await generateClimateResilientStrategies({
       urbanVulnerabilityIndex: mockUrbanVulnerabilityIndex(nasaData),
       ecosystemServiceModelerOutput: mockEcosystemServiceModelerOutput,
