@@ -1,18 +1,28 @@
 'use client';
 
 import type { GenerateClimateResilientStrategiesOutput } from '@/ai/flows/generate-climate-resilient-strategies';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import StrategyForm from '@/components/strategy-form';
 import ResultsDisplay from '@/components/results-display';
 import InitialState from '@/components/initial-state';
 import LoadingState from '@/components/loading-state';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [strategies, setStrategies] =
     useState<GenerateClimateResilientStrategiesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleFormSubmit = (
     data: GenerateClimateResilientStrategiesOutput | null,
@@ -27,6 +37,16 @@ export default function Home() {
       setStrategies(null);
     }
   };
+
+  if (isUserLoading || !user) {
+    return (
+       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background">
+        <div className="animate-pulse">
+            <LoadingState />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
