@@ -4,7 +4,7 @@ import {
   generateClimateResilientStrategies,
   type GenerateClimateResilientStrategiesOutput,
 } from '@/ai/flows/generate-climate-resilient-strategies';
-import { generateCityDescription } from '@/ai/flows/generate-city-description';
+import { generateCityDescription, generateCityDescriptionFromCityName } from '@/ai/flows/generate-city-description';
 import { z } from 'zod';
 import { getCoordinates, getNasaPowerData, NasaPowerData } from './services/nasa';
 
@@ -14,18 +14,18 @@ const formSchema = z.object({
 });
 
 // Mock data to simulate complex data inputs for the AI model
-const mockUrbanVulnerabilityIndex = (nasaData: NasaPowerData) => JSON.stringify({
+const mockUrbanVulnerabilityIndex = (nasaData: NasaPowerData | null) => JSON.stringify({
   "district_A": { 
-    "heat_exposure_risk": nasaData.T2M, // Using actual temp data
-    "relative_humidity": nasaData.RH2M, // Using actual humidity data
+    "heat_exposure_risk": nasaData?.T2M ?? 28, // Use default if null
+    "relative_humidity": nasaData?.RH2M ?? 65, // Use default if null
     "air_quality_index": 152, 
     "green_space_access": "low", 
     "population_density": 4500, 
     "vulnerable_population_ratio": 0.4 
   },
   "district_B": { 
-    "heat_exposure_risk": nasaData.T2M - 2, // Simulating a cooler district
-    "relative_humidity": nasaData.RH2M - 5,
+    "heat_exposure_risk": nasaData ? nasaData.T2M - 2 : 26, // Simulate a cooler district
+    "relative_humidity": nasaData ? nasaData.RH2M - 5 : 60,
     "air_quality_index": 95, 
     "green_space_access": "high", 
     "population_density": 2100, 
@@ -33,8 +33,8 @@ const mockUrbanVulnerabilityIndex = (nasaData: NasaPowerData) => JSON.stringify(
   },
   "district_C": { 
     "flood_risk": "high", 
-    "heat_exposure_risk": nasaData.T2M + 1.5, // Simulating a hotter district
-    "relative_humidity": nasaData.RH2M + 7,
+    "heat_exposure_risk": nasaData ? nasaData.T2M + 1.5 : 29.5, // Simulating a hotter district
+    "relative_humidity": nasaData ? nasaData.RH2M + 7 : 72,
     "air_quality_index": 120, 
     "green_space_access": "medium", 
     "population_density": 3200, 
@@ -74,21 +74,24 @@ export async function getStrategies(
 
     // 2. Get NASA POWER data for the coordinates
     let nasaData = await getNasaPowerData(coordinates.lat, coordinates.lon);
-    if (!nasaData) {
-      nasaError = 'Could not retrieve weather data from NASA POWER API. Using default values.';
-      // Fallback to default data
-      nasaData = { T2M: 25, RH2M: 50 }; // Default average values
-    }
     
     // 3. Generate city overview if it's not provided
     if (!cityOverview || cityOverview.trim().length === 0) {
-        const descriptionOutput = await generateCityDescription({ city, nasaData });
-        cityOverview = descriptionOutput.cityOverview;
+        if (nasaData) {
+            // Generate overview from NASA data
+            const descriptionOutput = await generateCityDescription({ city, nasaData });
+            cityOverview = descriptionOutput.cityOverview;
+        } else {
+            // If NASA data fails, generate overview from just the city name
+            nasaError = `Could not retrieve weather data for ${city}. Generating a plausible city overview with AI as a fallback.`;
+            const descriptionOutput = await generateCityDescriptionFromCityName({ city });
+            cityOverview = descriptionOutput.cityOverview;
+        }
     }
 
     // 4. Generate strategies using the real data and overview
     const output = await generateClimateResilientStrategies({
-      urbanVulnerabilityIndex: mockUrbanVulnerabilityIndex(nasaData),
+      urbanVulnerabilityIndex: mockUrbanVulnerabilityIndex(nasaData), // This will use defaults if nasaData is null
       ecosystemServiceModelerOutput: mockEcosystemServiceModelerOutput,
       cityOverview: cityOverview,
     });

@@ -4,6 +4,7 @@
  * @fileOverview A flow to generate a city description from NASA POWER data.
  *
  * - generateCityDescription - A function to generate a description.
+ * - generateCityDescriptionFromCityName - A function to generate a description with only the city name.
  * - GenerateCityDescriptionInput - The input type for the function.
  * - GenerateCityDescriptionOutput - The return type for the function.
  */
@@ -20,6 +21,12 @@ const GenerateCityDescriptionInputSchema = z.object({
 });
 export type GenerateCityDescriptionInput = z.infer<typeof GenerateCityDescriptionInputSchema>;
 
+const GenerateCityNameInputSchema = z.object({
+    city: z.string().describe('The name of the city.'),
+});
+export type GenerateCityNameInput = z.infer<typeof GenerateCityNameInputSchema>;
+
+
 const GenerateCityDescriptionOutputSchema = z.object({
   cityOverview: z.string().describe('A generated overview of the city based on the provided data, including potential challenges.'),
 });
@@ -29,6 +36,12 @@ export async function generateCityDescription(
   input: GenerateCityDescriptionInput
 ): Promise<GenerateCityDescriptionOutput> {
   return generateCityDescriptionFlow(input);
+}
+
+export async function generateCityDescriptionFromCityName(
+  input: GenerateCityNameInput
+): Promise<GenerateCityDescriptionOutput> {
+    return generateCityDescriptionFromCityNameFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -55,6 +68,35 @@ const generateCityDescriptionFlow = ai.defineFlow(
   },
   async input => {
     const { output } = await prompt(input);
+    return output!;
+  }
+);
+
+
+const fromCityNamePrompt = ai.definePrompt({
+  name: 'generateCityDescriptionFromCityNamePrompt',
+  input: { schema: GenerateCityNameInputSchema },
+  output: { schema: GenerateCityDescriptionOutputSchema },
+  prompt: `You are an expert urban analyst. The API to fetch real-time weather data failed.
+
+Based on your general knowledge of the provided city name, generate a plausible, one-paragraph overview of the city.
+
+This overview should describe the city and mention likely environmental challenges it might face. For example, a known coastal city might face rising sea levels, and a city in a desert might face extreme heat.
+
+City: {{{city}}}
+
+Generate the cityOverview.`,
+});
+
+
+const generateCityDescriptionFromCityNameFlow = ai.defineFlow(
+  {
+    name: 'generateCityDescriptionFromCityNameFlow',
+    inputSchema: GenerateCityNameInputSchema,
+    outputSchema: GenerateCityDescriptionOutputSchema,
+  },
+  async input => {
+    const { output } = await fromCityNamePrompt(input);
     return output!;
   }
 );
