@@ -8,7 +8,8 @@ import ResultsDisplay from '@/components/results-display';
 import InitialState from '@/components/initial-state';
 import LoadingState from '@/components/loading-state';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { HistoryItem } from './history/page';
 
 
 export default function Home() {
@@ -18,29 +19,30 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const historyData = queryParams.get('history');
+    const historyData = searchParams.get('history');
     if (historyData) {
       try {
-        const decodedData = decodeURIComponent(historyData);
-        const parsedStrategies = JSON.parse(decodedData);
-        setStrategies(parsedStrategies);
-        // Clean up the URL
+        const parsedData = JSON.parse(decodeURIComponent(historyData));
+        setStrategies(parsedData.strategies);
+        // Clean up the URL by replacing the current entry in the history stack
         router.replace('/', undefined);
       } catch (e) {
         setError("Failed to load history item. The data might be corrupted.");
         setStrategies(null);
       }
     }
-  }, [router]);
+  }, [searchParams, router]);
 
 
   const handleFormSubmit = (
     data: GenerateClimateResilientStrategiesOutput | null,
     error: string | null,
-    notification: string | null
+    notification: string | null,
+    city: string,
+    cityOverview: string
   ) => {
     if (notification) {
       toast({
@@ -53,6 +55,34 @@ export default function Home() {
     if (data) {
       setStrategies(data);
       setError(null);
+      
+      // Save to local storage
+      try {
+        const historyItem: HistoryItem = {
+            id: new Date().toISOString(),
+            city,
+            cityOverview,
+            strategies: data,
+            timestamp: new Date().toISOString(),
+        };
+
+        const existingHistoryRaw = localStorage.getItem('urbanResilienceHistory');
+        const existingHistory: HistoryItem[] = existingHistoryRaw ? JSON.parse(existingHistoryRaw) : [];
+        
+        // Add new item and keep the history to a reasonable size, e.g., 20 items
+        const updatedHistory = [historyItem, ...existingHistory].slice(0, 20);
+        
+        localStorage.setItem('urbanResilienceHistory', JSON.stringify(updatedHistory));
+        
+      } catch (e) {
+          console.error("Failed to save to history:", e);
+          toast({
+              variant: "destructive",
+              title: "Warning",
+              description: "Could not save this generation to your browser's history."
+          })
+      }
+
     }
     if (error) {
       setError(error);

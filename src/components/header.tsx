@@ -1,5 +1,7 @@
 'use client';
 
+import { History } from 'lucide-react';
+import { Button } from './ui/button';
 import { Logo } from './icons';
 import Link from 'next/link';
 
@@ -14,6 +16,14 @@ export default function Header() {
               UrbanResilienceAI
             </h1>
           </Link>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="icon">
+                <Link href="/history">
+                    <History className="h-5 w-5" />
+                    <span className="sr-only">History</span>
+                </Link>
+            </Button>
         </div>
       </div>
     </header>

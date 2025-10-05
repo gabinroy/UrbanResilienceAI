@@ -51,7 +51,7 @@ const mockEcosystemServiceModelerOutput = JSON.stringify({
 
 export async function getStrategies(
   values: z.infer<typeof formSchema>
-): Promise<{ data: GenerateClimateResilientStrategiesOutput | null; error: string | null; notification: string | null; }> {
+): Promise<{ data: GenerateClimateResilientStrategiesOutput | null; error: string | null; notification: string | null; city: string; cityOverview: string; }> {
   const validatedFields = formSchema.safeParse(values);
 
   if (!validatedFields.success) {
@@ -59,6 +59,8 @@ export async function getStrategies(
       data: null,
       error: 'Invalid input.',
       notification: null,
+      city: values.city,
+      cityOverview: values.cityOverview || '',
     };
   }
   
@@ -101,13 +103,13 @@ export async function getStrategies(
       cityOverview: cityOverview,
     });
     
-    return { data: output, error: null, notification: notification };
+    return { data: output, error: null, notification: notification, city, cityOverview };
   } catch (error) {
     console.error('Error generating strategies:', error);
     let errorMessage = 'Failed to generate strategies. Please try again.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return { data: null, error: errorMessage, notification: null };
+    return { data: null, error: errorMessage, notification: null, city: values.city, cityOverview: values.cityOverview || '' };
   }
 }
