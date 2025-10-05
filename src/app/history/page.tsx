@@ -76,7 +76,7 @@ export default function HistoryPage() {
         cityOverview: item.cityOverview,
         strategies: item.strategies,
     };
-    const query = encodeURIComponent(JSON.stringify(dataToPass));
+    const query = Buffer.from(JSON.stringify(dataToPass)).toString('base64');
     router.push(`/?history=${query}`);
   }
 

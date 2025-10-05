@@ -25,7 +25,8 @@ export default function Home() {
     const historyData = searchParams.get('history');
     if (historyData) {
       try {
-        const parsedData = JSON.parse(decodeURIComponent(historyData));
+        const decodedData = Buffer.from(historyData, 'base64').toString('utf-8');
+        const parsedData = JSON.parse(decodedData);
         setStrategies(parsedData.strategies);
         // Clean up the URL by replacing the current entry in the history stack
         router.replace('/', undefined);
