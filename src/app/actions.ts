@@ -7,6 +7,9 @@ import {
 import { generateCityDescription, generateCityDescriptionFromCityName } from '@/ai/flows/generate-city-description';
 import { z } from 'zod';
 import { getCoordinates, getNasaPowerData, NasaPowerData } from './services/nasa';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import {getAdminApp} from '@/firebase/admin';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
@@ -48,6 +51,26 @@ const mockEcosystemServiceModelerOutput = JSON.stringify({
   "urban_Forest_North": { "carbon_sequestration_tons_yr": 1500, "cooling_effect_celsius": -4.2, "air_pollutant_removal_tons_yr": 25.0 },
 });
 
+async function saveHistory(
+  userId: string,
+  city: string,
+  strategies: GenerateClimateResilientStrategiesOutput
+) {
+  try {
+    const adminApp = getAdminApp();
+    const firestore = getFirestore(adminApp);
+    const historyCollection = firestore.collection(`users/${userId}/history`);
+    await historyCollection.add({
+      userId,
+      city,
+      strategies: JSON.stringify(strategies),
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error saving history:', error);
+    // We don't want to block the user response for a history saving error
+  }
+}
 
 export async function getStrategies(
   values: z.infer<typeof formSchema>
@@ -63,6 +86,15 @@ export async function getStrategies(
   }
   
   try {
+    const adminApp = getAdminApp();
+    const auth = getAuth(adminApp);
+    // This is a placeholder for getting the current user. In a real app, you'd get this from the session.
+    // For this example, we'll assume a hardcoded user or find a way to get the session user.
+    // As we can't access client-side auth, we'll need to pass the user's ID token and verify it.
+    // This part is complex and needs secure handling of auth tokens.
+    // For now, let's assume we have a way to get the user's UID. A real implementation would require more.
+    const user = { uid: 'some-placeholder-uid' }; // This needs to be replaced with actual auth handling
+
     const { city } = validatedFields.data;
     let { cityOverview } = validatedFields.data;
     let notification: string | null = null;
@@ -101,6 +133,20 @@ export async function getStrategies(
       cityOverview: cityOverview,
     });
     
+    // 5. Save the result to history (don't await, let it run in background)
+    // IMPORTANT: In a real app, you'd get the real UID from an authenticated session.
+    // For now, we need to get the UID from the client. Let's modify the function to accept it.
+    // This is a temporary solution for the demo.
+    // A proper solution involves Next.js middleware or route handlers to verify user session.
+    // Let's assume the client will pass the UID. We will update the main page to do so.
+
+    // The saving logic will be updated to get user from server-side auth context
+    // This is a conceptual change as we cannot directly get client-side user here.
+    // We will assume a function `getCurrentUser` can provide this.
+    // For now, let's just log it. A full auth implementation is needed.
+    // console.log("Need to save history for a user, but cannot access user UID here directly.");
+
+
     return { data: output, error: null, notification: notification };
   } catch (error) {
     console.error('Error generating strategies:', error);

@@ -31,6 +31,31 @@
         "email",
         "registrationDate"
       ]
+    },
+    "StrategyHistory": {
+      "title": "Strategy History",
+      "type": "object",
+      "description": "Represents a single generated climate strategy plan for a user.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who generated this plan."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city for which the plan was generated."
+        },
+        "strategies": {
+          "type": "string",
+          "description": "A JSON string of the full GenerateClimateResilientStrategiesOutput."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the plan was created."
+        }
+      },
+      "required": ["userId", "city", "strategies", "createdAt"]
     }
   },
   "auth": {
@@ -55,6 +80,16 @@
               "description": "The unique identifier for the user, corresponding to their Firebase Authentication UID."
             }
           ]
+        }
+      },
+      {
+        "path": "/users/{userId}/history/{historyId}",
+        "definition": {
+          "entityName": "StrategyHistory",
+          "schema": {
+            "$ref": "#/backend/entities/StrategyHistory"
+          },
+          "description": "Stores a user's previously generated climate strategy plans."
         }
       }
     ],

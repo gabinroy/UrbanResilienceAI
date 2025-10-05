@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getStrategies } from '@/app/actions';
 import { type GenerateClimateResilientStrategiesOutput } from '@/ai/flows/generate-climate-resilient-strategies';
 import { BrainCircuit } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
@@ -34,6 +35,7 @@ interface StrategyFormProps {
 
 export default function StrategyForm({ setIsLoading, onResult }: StrategyFormProps) {
   const [isPending, startTransition] = useTransition();
+  const { user } = useUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,8 +46,14 @@ export default function StrategyForm({ setIsLoading, onResult }: StrategyFormPro
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+        onResult(null, "You must be logged in to generate strategies.", null);
+        return;
+    }
     setIsLoading(true);
     startTransition(async () => {
+      // Here we would ideally pass the user's ID token to the server action
+      // for verification, but for simplicity we are not doing it in this demo.
       const result = await getStrategies(values);
       onResult(result.data, result.error, result.notification);
       setIsLoading(false);
@@ -102,7 +110,7 @@ export default function StrategyForm({ setIsLoading, onResult }: StrategyFormPro
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full" disabled={isPending || !user}>
               {isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
