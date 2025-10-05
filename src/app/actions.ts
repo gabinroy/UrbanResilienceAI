@@ -7,10 +7,6 @@ import {
 import { generateCityDescription, generateCityDescriptionFromCityName } from '@/ai/flows/generate-city-description';
 import { z } from 'zod';
 import { getCoordinates, getNasaPowerData, NasaPowerData } from './services/nasa';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import {getAdminApp} from '@/firebase/admin';
-import { cookies } from 'next/headers';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
@@ -32,8 +28,7 @@ const mockUrbanVulnerabilityIndex = (nasaData: NasaPowerData | null) => JSON.str
     "relative_humidity": nasaData ? nasaData.RH2M - 5 : 60,
     "air_quality_index": 95, 
     "green_space_access": "high", 
-    "population_density": 2100, 
-    "vulnerable_population_ratio": 0.15 
+    "population_density": 2100, Vulnerable_population_ratio": 0.15 
   },
   "district_C": { 
     "flood_risk": "high", 
@@ -52,43 +47,6 @@ const mockEcosystemServiceModelerOutput = JSON.stringify({
   "urban_Forest_North": { "carbon_sequestration_tons_yr": 1500, "cooling_effect_celsius": -4.2, "air_pollutant_removal_tons_yr": 25.0 },
 });
 
-async function getCurrentUser() {
-    const sessionCookie = cookies().get('session')?.value;
-    if (!sessionCookie) {
-        return null;
-    }
-    try {
-        const adminApp = await getAdminApp();
-        const auth = getAuth(adminApp);
-        const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
-        return decodedToken;
-    } catch (error) {
-        console.error('Error verifying session cookie:', error);
-        return null;
-    }
-}
-
-
-async function saveHistory(
-  userId: string,
-  city: string,
-  strategies: GenerateClimateResilientStrategiesOutput
-) {
-  try {
-    const adminApp = await getAdminApp();
-    const firestore = getFirestore(adminApp);
-    const historyCollection = firestore.collection(`users/${userId}/history`);
-    await historyCollection.add({
-      userId,
-      city,
-      strategies: JSON.stringify(strategies),
-      createdAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Error saving history:', error);
-    // We don't want to block the user response for a history saving error
-  }
-}
 
 export async function getStrategies(
   values: z.infer<typeof formSchema>
@@ -103,11 +61,6 @@ export async function getStrategies(
     };
   }
   
-  const user = await getCurrentUser();
-  if (!user) {
-    return { data: null, error: 'You must be logged in to perform this action.', notification: null };
-  }
-
   try {
     const { city } = validatedFields.data;
     let { cityOverview } = validatedFields.data;
@@ -147,10 +100,6 @@ export async function getStrategies(
       cityOverview: cityOverview,
     });
     
-    // 5. Save the result to history (don't await, let it run in background)
-    saveHistory(user.uid, city, output);
-
-
     return { data: output, error: null, notification: notification };
   } catch (error) {
     console.error('Error generating strategies:', error);
@@ -160,38 +109,4 @@ export async function getStrategies(
     }
     return { data: null, error: errorMessage, notification: null };
   }
-}
-
-export async function deleteUserAccount(): Promise<{ error: string | null }> {
-    const user = await getCurrentUser();
-    if (!user) {
-        return { error: 'You must be logged in to delete your account.' };
-    }
-    try {
-        const adminApp = await getAdminApp();
-        const auth = getAuth(adminApp);
-        const firestore = getFirestore(adminApp);
-
-        // This is a best-effort to delete user data. In a real production app,
-        // you would likely want a more robust solution, possibly using Cloud Functions
-        // to clean up data asynchronously after a user is deleted.
-        const userHistoryRef = firestore.collection(`users/${user.uid}/history`);
-        const snapshot = await userHistoryRef.get();
-        const batch = firestore.batch();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-
-        await firestore.collection('users').doc(user.uid).delete();
-
-
-        await auth.deleteUser(user.uid);
-        
-        // Invalidate session cookie
-        cookies().delete('session');
-
-        return { error: null };
-    } catch (error) {
-        console.error("Error deleting user account:", error);
-        return { error: 'An unexpected error occurred while deleting your account. Please try again.' };
-    }
 }

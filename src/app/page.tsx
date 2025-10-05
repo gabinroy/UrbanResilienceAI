@@ -7,10 +7,8 @@ import StrategyForm from '@/components/strategy-form';
 import ResultsDisplay from '@/components/results-display';
 import InitialState from '@/components/initial-state';
 import LoadingState from '@/components/loading-state';
-import { useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { StrategyHistoryItem } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 
 export default function Home() {
@@ -18,15 +16,8 @@ export default function Home() {
     useState<GenerateClimateResilientStrategiesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router]);
+  const router = useRouter();
   
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -68,16 +59,6 @@ export default function Home() {
       setStrategies(null);
     }
   };
-
-  if (isUserLoading || !user) {
-    return (
-       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background">
-        <div className="animate-pulse">
-            <LoadingState />
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
