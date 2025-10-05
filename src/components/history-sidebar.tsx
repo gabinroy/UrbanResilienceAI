@@ -3,8 +3,7 @@
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { History } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
@@ -31,24 +30,18 @@ export default function HistorySidebar({ onLoadHistory }: HistorySidebarProps) {
   const { data: historyItems, isLoading } = useCollection<StrategyHistoryItem>(historyQuery);
 
   return (
-    <Card className="sticky top-24">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-primary" />
-          <CardTitle className="font-headline text-lg">History</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <Card>
+      <CardContent className="p-2">
         <ScrollArea className="h-96">
           {isLoading && (
-            <div className="space-y-4">
+            <div className="space-y-4 p-4">
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           )}
           {!isLoading && historyItems && historyItems.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 p-2">
               {historyItems.map((item) => (
                 <Button
                   key={item.id}
@@ -67,7 +60,7 @@ export default function HistorySidebar({ onLoadHistory }: HistorySidebarProps) {
             </div>
           )}
           {!isLoading && (!historyItems || historyItems.length === 0) && (
-            <p className="text-center text-sm text-muted-foreground">No history yet.</p>
+            <p className="p-4 text-center text-sm text-muted-foreground">No history yet.</p>
           )}
         </ScrollArea>
       </CardContent>
