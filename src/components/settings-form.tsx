@@ -1,25 +1,12 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { useTransition } from 'react';
 import { useUser } from '@/firebase';
 import {
-  updateUserProfile,
   deleteUserAccount,
 } from '@/app/actions';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+
 import {
   Card,
   CardContent,
@@ -42,44 +29,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Trash } from 'lucide-react';
 
-const profileFormSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters.').max(50, 'Name cannot exceed 50 characters.'),
-});
-
 export function SettingsForm() {
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
-
-  const form = useForm<z.infer<typeof profileFormSchema>>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      displayName: user?.displayName || '',
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof profileFormSchema>) {
-    startTransition(async () => {
-      const result = await updateUserProfile(values);
-      if (result.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error updating profile',
-          description: result.error,
-        });
-      } else {
-        toast({
-          title: 'Profile Updated',
-          description: 'Your display name has been successfully updated.',
-        });
-        // We need to trigger a refresh of the user object somehow.
-        // A page reload is the simplest way.
-        router.refresh();
-      }
-    });
-  }
 
   async function handleDeleteAccount() {
     startDeleteTransition(async () => {
@@ -102,44 +56,7 @@ export function SettingsForm() {
 
 
   return (
-    <div className="grid gap-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-lg">Profile Settings</CardTitle>
-          <CardDescription>
-            Update your display name.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Your Name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      This will be your public display name.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      
+    <div className="grid gap-8">      
       <Card className="border-destructive">
          <CardHeader>
           <CardTitle className="font-headline text-lg text-destructive">Delete Account</CardTitle>

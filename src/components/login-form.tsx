@@ -26,6 +26,7 @@ import { useAuth, useFirestore } from '@/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +34,7 @@ import { useRouter } from 'next/navigation';
 import { Logo } from './icons';
 
 const formSchema = z.object({
+  displayName: z.string().optional(),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z
     .string()
@@ -52,6 +54,7 @@ export function LoginForm() {
   const form = useForm<UserFormValue>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      displayName: '',
       email: '',
       password: '',
     },
@@ -61,13 +64,21 @@ export function LoginForm() {
     setLoading(true);
     try {
       if (isSignUp) {
+        if (!data.displayName || data.displayName.length < 2) {
+            form.setError("displayName", { type: "manual", message: "Display name must be at least 2 characters."})
+            setLoading(false);
+            return;
+        }
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const user = userCredential.user;
 
+        // Update Firebase Auth profile
+        await updateProfile(user, { displayName: data.displayName });
+        
         // Create user document in Firestore
         await setDoc(doc(firestore, "users", user.uid), {
             id: user.uid,
-            username: user.email, // Default username to email
+            username: data.displayName,
             email: user.email,
             registrationDate: new Date().toISOString()
         });
@@ -106,13 +117,32 @@ export function LoginForm() {
         </CardTitle>
         <CardDescription>
           {isSignUp
-            ? 'Enter your email and password to sign up.'
+            ? 'Enter your details to create an account.'
             : 'Enter your credentials to access your account.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+             {isSignUp && (
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Your Name"
+                        disabled={loading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="email"

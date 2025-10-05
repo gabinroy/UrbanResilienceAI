@@ -11,15 +11,10 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import {getAdminApp} from '@/firebase/admin';
 import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
   cityOverview: z.string().optional(),
-});
-
-const profileFormSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters.').max(50, 'Name cannot exceed 50 characters.'),
 });
 
 // Mock data to simulate complex data inputs for the AI model
@@ -165,42 +160,6 @@ export async function getStrategies(
     }
     return { data: null, error: errorMessage, notification: null };
   }
-}
-
-export async function updateUserProfile(values: z.infer<typeof profileFormSchema>): Promise<{ error: string | null }> {
-    const user = await getCurrentUser();
-    if (!user) {
-        return { error: 'You must be logged in to update your profile.' };
-    }
-
-    const validatedFields = profileFormSchema.safeParse(values);
-    if (!validatedFields.success) {
-        return { error: 'Invalid data provided.' };
-    }
-
-    try {
-        const adminApp = await getAdminApp();
-        const auth = getAuth(adminApp);
-        const firestore = getFirestore(adminApp);
-        const { displayName } = validatedFields.data;
-
-        // Update Firebase Auth
-        await auth.updateUser(user.uid, { displayName });
-
-        // Update Firestore
-        const userRef = firestore.collection('users').doc(user.uid);
-        await userRef.set({
-            username: displayName, // Using username as per your backend.json
-            email: user.email,
-        }, { merge: true });
-
-
-        revalidatePath('/settings');
-        return { error: null };
-    } catch (error) {
-        console.error("Error updating user profile:", error);
-        return { error: 'An unexpected error occurred. Please try again.' };
-    }
 }
 
 export async function deleteUserAccount(): Promise<{ error: string | null }> {
