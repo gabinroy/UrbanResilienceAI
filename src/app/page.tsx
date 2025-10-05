@@ -22,12 +22,19 @@ export default function Home() {
   const searchParams = useSearchParams();
   
   useEffect(() => {
-    const historyData = searchParams.get('history');
-    if (historyData) {
+    const historyId = searchParams.get('historyId');
+    if (historyId) {
       try {
-        const decodedData = Buffer.from(historyData, 'base64').toString('utf-8');
-        const parsedData = JSON.parse(decodedData);
-        setStrategies(parsedData.strategies);
+        const storedHistory = localStorage.getItem('urbanResilienceHistory');
+        if (storedHistory) {
+          const historyItems: HistoryItem[] = JSON.parse(storedHistory);
+          const itemToLoad = historyItems.find(item => item.id === historyId);
+          if (itemToLoad) {
+            setStrategies(itemToLoad.strategies);
+          } else {
+            setError("Failed to find the history item.");
+          }
+        }
         // Clean up the URL by replacing the current entry in the history stack
         router.replace('/', undefined);
       } catch (e) {

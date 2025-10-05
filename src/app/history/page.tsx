@@ -71,13 +71,7 @@ export default function HistoryPage() {
   };
   
   const handleViewItem = (item: HistoryItem) => {
-    const dataToPass = {
-        city: item.city,
-        cityOverview: item.cityOverview,
-        strategies: item.strategies,
-    };
-    const query = Buffer.from(JSON.stringify(dataToPass)).toString('base64');
-    router.push(`/?history=${query}`);
+    router.push(`/?historyId=${item.id}`);
   }
 
   if (!isClient) {
@@ -148,7 +142,7 @@ export default function HistoryPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <Info className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="mb-2 font-headline text-2xl">No History Found</CardTitle>
+              <CardTitle className="font-headline text-2xl">No History Found</CardTitle>
               <p className="max-w-md text-muted-foreground">
                 You haven&apos;t generated any climate-resilient strategies yet.
               </p>
