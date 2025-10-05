@@ -27,6 +27,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  User,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +43,20 @@ const formSchema = z.object({
 });
 
 type UserFormValue = z.infer<typeof formSchema>;
+
+async function createSession(idToken: string) {
+    const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+        },
+    });
+
+    if (!res.ok) {
+        throw new Error('Failed to create session');
+    }
+}
 
 export function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -59,6 +74,16 @@ export function LoginForm() {
       password: '',
     },
   });
+
+  const handleAuthSuccess = async (user: User) => {
+    const idToken = await user.getIdToken();
+    await createSession(idToken);
+    toast({
+        title: isSignUp ? 'Account Created' : 'Signed In',
+        description: isSignUp ? "You've been successfully signed up." : "You've been successfully signed in.",
+    });
+    router.push('/');
+  }
 
   const onSubmit = async (data: UserFormValue) => {
     setLoading(true);
@@ -83,18 +108,12 @@ export function LoginForm() {
             registrationDate: new Date().toISOString()
         });
 
-        toast({
-          title: 'Account Created',
-          description: "You've been successfully signed up.",
-        });
+        await handleAuthSuccess(user);
+
       } else {
-        await signInWithEmailAndPassword(auth, data.email, data.password);
-        toast({
-          title: 'Signed In',
-          description: "You've been successfully signed in.",
-        });
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        await handleAuthSuccess(userCredential.user);
       }
-      router.push('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',

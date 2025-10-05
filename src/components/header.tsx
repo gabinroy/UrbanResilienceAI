@@ -17,6 +17,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 
+async function signOutSession() {
+    await fetch('/api/auth/session', { method: 'DELETE' });
+}
+
 export default function Header() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
@@ -24,6 +28,7 @@ export default function Header() {
 
   const handleSignOut = async () => {
     await signOut(auth);
+    await signOutSession();
     router.push('/login');
   };
   
