@@ -22,11 +22,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Logo } from './icons';
@@ -44,6 +45,7 @@ export function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -59,7 +61,17 @@ export function LoginForm() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
+
+        // Create user document in Firestore
+        await setDoc(doc(firestore, "users", user.uid), {
+            id: user.uid,
+            username: user.email, // Default username to email
+            email: user.email,
+            registrationDate: new Date().toISOString()
+        });
+
         toast({
           title: 'Account Created',
           description: "You've been successfully signed up.",

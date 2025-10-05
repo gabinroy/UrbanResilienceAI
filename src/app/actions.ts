@@ -181,9 +181,19 @@ export async function updateUserProfile(values: z.infer<typeof profileFormSchema
     try {
         const adminApp = await getAdminApp();
         const auth = getAuth(adminApp);
-        await auth.updateUser(user.uid, {
-            displayName: validatedFields.data.displayName,
-        });
+        const firestore = getFirestore(adminApp);
+        const { displayName } = validatedFields.data;
+
+        // Update Firebase Auth
+        await auth.updateUser(user.uid, { displayName });
+
+        // Update Firestore
+        const userRef = firestore.collection('users').doc(user.uid);
+        await userRef.set({
+            username: displayName, // Using username as per your backend.json
+            email: user.email,
+        }, { merge: true });
+
 
         revalidatePath('/settings');
         return { error: null };
