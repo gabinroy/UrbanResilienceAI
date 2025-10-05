@@ -28,7 +28,8 @@ const mockUrbanVulnerabilityIndex = (nasaData: NasaPowerData | null) => JSON.str
     "relative_humidity": nasaData ? nasaData.RH2M - 5 : 60,
     "air_quality_index": 95, 
     "green_space_access": "high", 
-    "population_density": 2100, Vulnerable_population_ratio": 0.15 
+    "population_density": 2100, 
+    "vulnerable_population_ratio": 0.15 
   },
   "district_C": { 
     "flood_risk": "high", 
