@@ -98,32 +98,34 @@ export default function Home() {
               <InitialState error={error} />
             )}
           </div>
-          <div className="sticky top-24 grid gap-6">
-            <StrategyForm
-              setIsLoading={setIsLoading}
-              onResult={handleFormSubmit}
-            />
-            <Collapsible
-                open={isHistoryOpen}
-                onOpenChange={setIsHistoryOpen}
-                className="grid gap-6"
-            >
-              <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="flex items-center justify-between w-full px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <History className="h-5 w-5 text-primary" />
-                        <h3 className="font-headline text-lg">History</h3>
-                      </div>
-                      <ChevronsUpDown className="h-4 w-4" />
-                  </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <HistorySidebar 
-                    key={historyKey} 
-                    onLoadHistory={handleLoadHistory} 
+          <div className="relative">
+            <div className="sticky top-24 grid gap-6">
+                <StrategyForm
+                  setIsLoading={setIsLoading}
+                  onResult={handleFormSubmit}
                 />
-              </CollapsibleContent>
-            </Collapsible>
+                <Collapsible
+                    open={isHistoryOpen}
+                    onOpenChange={setIsHistoryOpen}
+                    className="grid gap-6"
+                >
+                  <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="flex items-center justify-between w-full px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-primary" />
+                            <h3 className="font-headline text-lg">History</h3>
+                          </div>
+                          <ChevronsUpDown className="h-4 w-4" />
+                      </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <HistorySidebar 
+                        key={historyKey} 
+                        onLoadHistory={handleLoadHistory} 
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+            </div>
           </div>
         </div>
       </main>

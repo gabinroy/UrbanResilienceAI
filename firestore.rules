@@ -1,90 +1,73 @@
 /**
- * @file Overview
- * This ruleset enforces a strict user-ownership model for the UrbanResilienceAI application.
- * All data is nested under `/users/{userId}`, ensuring that only the authenticated user can access their own data.
+ * @fileOverview Firestore Security Rules for UrbanResilienceAI application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for accessing user profiles and their associated strategy history.
+ * Each user can only read and write their own data, preventing unauthorized access.
  *
  * Data Structure:
- * - `/users/{userId}`: Stores user profile information.
- * - `/users/{userId}/history/{historyId}`: Stores climate strategy history for a specific user.
+ * - /users/{userId}: Stores user profile information.  Access is restricted to the owning user.
+ * - /users/{userId}/history/{historyId}: Stores strategy history for each user. Access is restricted to the owning user.
  *
  * Key Security Decisions:
- * - Users can only access their own data.
- * - Listing all users is not allowed.
- * - Write access to a user's data is restricted to the user themselves.
+ * - Users can only create their own user document (self-registration).
+ * - Listing of users is denied to prevent unauthorized enumeration.
+ * - Strategy history is accessible only to the user who owns it.
  *
- * @note Denormalization is not needed at this stage as the data structure already supports path-based ownership.
+ * Denormalization for Authorization:
+ * - The `userId` is embedded in both the user document path and the strategy history documents to enable simple authorization checks.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Root match to prevent general collection access. All access must be done through specified paths.
-     * @path /
-     * @allow (get, list, create, update, delete): Never. This is a root-level catch-all.
-     * @deny (get, list, create, update, delete): Always, as this is a root match.
-     * @principle Prevents open access.
+     * @description Enforces that all requests originate from a signed-in user.
      */
-    match /{document=**} {
-      allow read, write: if false;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     /**
-     * @description Enforces user-ownership for user profiles.
+     * @description Checks if the request is made by the owner of the specified user ID.
+     * @param {string} userId - The user ID to check against the request's authentication UID.
+     * @returns {boolean} True if the user is the owner, false otherwise.
+     * @example isOwner('user123') returns true if request.auth.uid is 'user123'.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Rules for the /users/{userId} collection.
      * @path /users/{userId}
-     * @allow (get): If the authenticated user's ID matches the userId.
-     * @allow (list): Never. User listing is disallowed.
-     * @allow (create): If the authenticated user's ID matches the userId.
-     * @allow (update): If the authenticated user's ID matches the userId and the document exists.
-     * @allow (delete): If the authenticated user's ID matches the userId and the document exists.
-     * @deny (get): If the authenticated user's ID does not match the userId.
-     * @deny (create): If the authenticated user's ID does not match the userId.
-     * @deny (update): If the authenticated user's ID does not match the userId or the document does not exist.
-     * @deny (delete): If the authenticated user's ID does not match the userId or the document does not exist.
-     * @principle Enforces document ownership for writes.
+     * @allow (create) - Authenticated user with UID 'user123' can create a user document where userId is 'user123'.
+     * @allow (get, update, delete) - Authenticated user with UID 'user123' can get, update, or delete their own user document ('user123').
+     * @deny (create) - Authenticated user with UID 'user456' cannot create a user document where userId is 'user123'.
+     * @deny (get, update, delete) - Authenticated user with UID 'user456' cannot get, update, or delete the user document of 'user123'.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
       allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
+      allow list: if false; // Listing users is not permitted.
       allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Enforces user-ownership for strategy history documents.
+     * @description Rules for the /users/{userId}/history/{historyId} collection.
      * @path /users/{userId}/history/{historyId}
-     * @allow (get): If the authenticated user's ID matches the userId.
-     * @allow (list): If the authenticated user's ID matches the userId.
-     * @allow (create): If the authenticated user's ID matches the userId.
-     * @allow (update): If the authenticated user's ID matches the userId and the document exists.
-     * @allow (delete): If the authenticated user's ID matches the userId and the document exists.
-     * @deny (get): If the authenticated user's ID does not match the userId.
-     * @deny (list): If the authenticated user's ID does not match the userId.
-     * @deny (create): If the authenticated user's ID does not match the userId.
-     * @deny (update): If the authenticated user's ID does not match the userId or the document does not exist.
-     * @deny (delete): If the authenticated user's ID does not match the userId or the document does not exist.
-     * @principle Enforces document ownership for writes within a user's data tree.
+     * @allow (create, get, list, update, delete) - Authenticated user with UID 'user123' can create, get, list, update, or delete history documents under their own user document ('user123').
+     * @deny (create, get, list, update, delete) - Authenticated user with UID 'user456' cannot create, get, list, update, or delete history documents under the user document of 'user123'.
+     * @principle Restricts access to a user's own strategy history.
      */
     match /users/{userId}/history/{historyId} {
       allow get: if isSignedIn() && isOwner(userId);
       allow list: if isSignedIn() && isOwner(userId);
       allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-      return isSignedIn() && isOwner(userId) && resource != null;
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
   }
 }

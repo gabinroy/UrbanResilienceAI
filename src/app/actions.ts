@@ -10,10 +10,16 @@ import { getCoordinates, getNasaPowerData, NasaPowerData } from './services/nasa
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import {getAdminApp} from '@/firebase/admin';
+import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 
 const formSchema = z.object({
   city: z.string().min(2, 'Please provide a valid city name.'),
   cityOverview: z.string().optional(),
+});
+
+const profileFormSchema = z.object({
+  displayName: z.string().min(2, 'Name must be at least 2 characters.').max(50, 'Name cannot exceed 50 characters.'),
 });
 
 // Mock data to simulate complex data inputs for the AI model
@@ -51,6 +57,23 @@ const mockEcosystemServiceModelerOutput = JSON.stringify({
   "urban_Forest_North": { "carbon_sequestration_tons_yr": 1500, "cooling_effect_celsius": -4.2, "air_pollutant_removal_tons_yr": 25.0 },
 });
 
+async function getCurrentUser() {
+    const sessionCookie = cookies().get('session')?.value;
+    if (!sessionCookie) {
+        return null;
+    }
+    try {
+        const adminApp = await getAdminApp();
+        const auth = getAuth(adminApp);
+        const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
+        return decodedToken;
+    } catch (error) {
+        console.error('Error verifying session cookie:', error);
+        return null;
+    }
+}
+
+
 async function saveHistory(
   userId: string,
   city: string,
@@ -85,16 +108,12 @@ export async function getStrategies(
     };
   }
   
-  try {
-    const adminApp = await getAdminApp();
-    const auth = getAuth(adminApp);
-    // This is a placeholder for getting the current user. In a real app, you'd get this from the session.
-    // For this example, we'll assume a hardcoded user or find a way to get the session user.
-    // As we can't access client-side auth, we'll need to pass the user's ID token and verify it.
-    // This part is complex and needs secure handling of auth tokens.
-    // For now, let's assume we have a way to get the user's UID. A real implementation would require more.
-    const user = { uid: 'some-placeholder-uid' }; // This needs to be replaced with actual auth handling
+  const user = await getCurrentUser();
+  if (!user) {
+    return { data: null, error: 'You must be logged in to perform this action.', notification: null };
+  }
 
+  try {
     const { city } = validatedFields.data;
     let { cityOverview } = validatedFields.data;
     let notification: string | null = null;
@@ -134,17 +153,7 @@ export async function getStrategies(
     });
     
     // 5. Save the result to history (don't await, let it run in background)
-    // IMPORTANT: In a real app, you'd get the real UID from an authenticated session.
-    // For now, we need to get the UID from the client. Let's modify the function to accept it.
-    // This is a temporary solution for the demo.
-    // A proper solution involves Next.js middleware or route handlers to verify user session.
-    // Let's assume the client will pass the UID. We will update the main page to do so.
-
-    // The saving logic will be updated to get user from server-side auth context
-    // This is a conceptual change as we cannot directly get client-side user here.
-    // We will assume a function `getCurrentUser` can provide this.
-    // For now, let's just log it. A full auth implementation is needed.
-    // console.log("Need to save history for a user, but cannot access user UID here directly.");
+    saveHistory(user.uid, city, output);
 
 
     return { data: output, error: null, notification: notification };
@@ -156,4 +165,64 @@ export async function getStrategies(
     }
     return { data: null, error: errorMessage, notification: null };
   }
+}
+
+export async function updateUserProfile(values: z.infer<typeof profileFormSchema>): Promise<{ error: string | null }> {
+    const user = await getCurrentUser();
+    if (!user) {
+        return { error: 'You must be logged in to update your profile.' };
+    }
+
+    const validatedFields = profileFormSchema.safeParse(values);
+    if (!validatedFields.success) {
+        return { error: 'Invalid data provided.' };
+    }
+
+    try {
+        const adminApp = await getAdminApp();
+        const auth = getAuth(adminApp);
+        await auth.updateUser(user.uid, {
+            displayName: validatedFields.data.displayName,
+        });
+
+        revalidatePath('/settings');
+        return { error: null };
+    } catch (error) {
+        console.error("Error updating user profile:", error);
+        return { error: 'An unexpected error occurred. Please try again.' };
+    }
+}
+
+export async function deleteUserAccount(): Promise<{ error: string | null }> {
+    const user = await getCurrentUser();
+    if (!user) {
+        return { error: 'You must be logged in to delete your account.' };
+    }
+    try {
+        const adminApp = await getAdminApp();
+        const auth = getAuth(adminApp);
+        const firestore = getFirestore(adminApp);
+
+        // This is a best-effort to delete user data. In a real production app,
+        // you would likely want a more robust solution, possibly using Cloud Functions
+        // to clean up data asynchronously after a user is deleted.
+        const userHistoryRef = firestore.collection(`users/${user.uid}/history`);
+        const snapshot = await userHistoryRef.get();
+        const batch = firestore.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
+        await firestore.collection('users').doc(user.uid).delete();
+
+
+        await auth.deleteUser(user.uid);
+        
+        // Invalidate session cookie
+        cookies().delete('session');
+
+        return { error: null };
+    } catch (error) {
+        console.error("Error deleting user account:", error);
+        return { error: 'An unexpected error occurred while deleting your account. Please try again.' };
+    }
 }
