@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { LogOut, Settings, User as UserIcon, History } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,10 +36,12 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-6 lg:px-8">
         <div className="flex items-center gap-4">
-          <Logo className="h-8 w-8" />
-          <h1 className="font-headline text-xl font-bold tracking-tight text-foreground">
-            UrbanResilienceAI
-          </h1>
+          <Link href="/" className="flex items-center gap-4">
+            <Logo className="h-8 w-8" />
+            <h1 className="font-headline text-xl font-bold tracking-tight text-foreground">
+              UrbanResilienceAI
+            </h1>
+          </Link>
         </div>
         <div>
           {isUserLoading ? (
@@ -64,6 +66,12 @@ export default function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/history">
+                    <History className="mr-2 h-4 w-4" />
+                    <span>History</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
                     <Settings className="mr-2 h-4 w-4" />

@@ -10,15 +10,7 @@ import LoadingState from '@/components/loading-state';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import HistorySidebar from '@/components/history-sidebar';
 import type { StrategyHistoryItem } from '@/lib/types';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, History } from 'lucide-react';
 
 
 export default function Home() {
@@ -29,14 +21,30 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
-  const [historyKey, setHistoryKey] = useState(0);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+  
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const historyData = queryParams.get('history');
+    if (historyData) {
+      try {
+        const decodedData = decodeURIComponent(historyData);
+        const parsedStrategies = JSON.parse(decodedData);
+        setStrategies(parsedStrategies);
+        // Clean up the URL
+        router.replace('/', undefined);
+      } catch (e) {
+        setError("Failed to load history item. The data might be corrupted.");
+        setStrategies(null);
+      }
+    }
+  }, [router]);
+
 
   const handleFormSubmit = (
     data: GenerateClimateResilientStrategiesOutput | null,
@@ -54,25 +62,12 @@ export default function Home() {
     if (data) {
       setStrategies(data);
       setError(null);
-      setHistoryKey(prev => prev + 1); // Force re-render of history sidebar
     }
     if (error) {
       setError(error);
       setStrategies(null);
     }
   };
-
-  const handleLoadHistory = (item: StrategyHistoryItem) => {
-    try {
-      const parsedStrategies = JSON.parse(item.strategies);
-      setStrategies(parsedStrategies);
-      setError(null);
-      setIsLoading(false);
-    } catch (e) {
-      setError("Failed to load history item. The data might be corrupted.");
-      setStrategies(null);
-    }
-  }
 
   if (isUserLoading || !user) {
     return (
@@ -104,27 +99,6 @@ export default function Home() {
                   setIsLoading={setIsLoading}
                   onResult={handleFormSubmit}
                 />
-                <Collapsible
-                    open={isHistoryOpen}
-                    onOpenChange={setIsHistoryOpen}
-                    className="grid gap-6"
-                >
-                  <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="flex items-center justify-between w-full px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <History className="h-5 w-5 text-primary" />
-                            <h3 className="font-headline text-lg">History</h3>
-                          </div>
-                          <ChevronsUpDown className="h-4 w-4" />
-                      </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <HistorySidebar 
-                        key={historyKey} 
-                        onLoadHistory={handleLoadHistory} 
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
             </div>
           </div>
         </div>
