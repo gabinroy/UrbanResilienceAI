@@ -29,7 +29,7 @@ export interface HistoryItem {
   timestamp: string;
 }
 
-export default function HistoryPage() {
+function HistoryClientView() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
@@ -79,79 +79,86 @@ export default function HistoryPage() {
   }
 
   return (
+    <div className="mx-auto w-full max-w-4xl">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <History className="h-8 w-8 text-primary" />
+          <h1 className="font-headline text-3xl font-bold">Generation History</h1>
+        </div>
+        {history.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear History
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete your entire generation history from this browser.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearHistory}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      {history.length > 0 ? (
+        <div className="grid gap-4">
+          {history.map((item) => (
+            <Card key={item.id}>
+              <CardHeader>
+                <CardTitle className='flex justify-between items-center'>
+                  <span>{item.city}</span>
+                  <Button variant="outline" size="sm" onClick={() => handleViewItem(item)}>
+                    View
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                    {item.cityOverview}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Generated on: {new Date(item.timestamp).toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="flex min-h-[40vh] flex-col items-center justify-center border-2 border-dashed bg-card/50 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Info className="h-8 w-8 text-primary" />
+          </div>
+          <CardTitle className="font-headline text-2xl">No History Found</CardTitle>
+          <p className="max-w-md text-muted-foreground">
+            You haven&apos;t generated any climate-resilient strategies yet.
+          </p>
+           <Button asChild className="mt-4">
+            <Link href="/">Start Generating</Link>
+          </Button>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+
+export default function HistoryPage() {
+  return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <Header />
       <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="mx-auto w-full max-w-4xl">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <History className="h-8 w-8 text-primary" />
-              <h1 className="font-headline text-3xl font-bold">Generation History</h1>
-            </div>
-            {history.length > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear History
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your entire generation history from this browser.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearHistory}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-
-          {history.length > 0 ? (
-            <div className="grid gap-4">
-              {history.map((item) => (
-                <Card key={item.id}>
-                  <CardHeader>
-                    <CardTitle className='flex justify-between items-center'>
-                      <span>{item.city}</span>
-                      <Button variant="outline" size="sm" onClick={() => handleViewItem(item)}>
-                        View
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                        {item.cityOverview}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Generated on: {new Date(item.timestamp).toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="flex min-h-[40vh] flex-col items-center justify-center border-2 border-dashed bg-card/50 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Info className="h-8 w-8 text-primary" />
-              </div>
-              <CardTitle className="font-headline text-2xl">No History Found</CardTitle>
-              <p className="max-w-md text-muted-foreground">
-                You haven&apos;t generated any climate-resilient strategies yet.
-              </p>
-               <Button asChild className="mt-4">
-                <Link href="/">Start Generating</Link>
-              </Button>
-            </Card>
-          )}
-        </div>
+        <HistoryClientView />
       </main>
     </div>
   );
