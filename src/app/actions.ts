@@ -57,7 +57,7 @@ async function saveHistory(
   strategies: GenerateClimateResilientStrategiesOutput
 ) {
   try {
-    const adminApp = getAdminApp();
+    const adminApp = await getAdminApp();
     const firestore = getFirestore(adminApp);
     const historyCollection = firestore.collection(`users/${userId}/history`);
     await historyCollection.add({
@@ -86,7 +86,7 @@ export async function getStrategies(
   }
   
   try {
-    const adminApp = getAdminApp();
+    const adminApp = await getAdminApp();
     const auth = getAuth(adminApp);
     // This is a placeholder for getting the current user. In a real app, you'd get this from the session.
     // For this example, we'll assume a hardcoded user or find a way to get the session user.
